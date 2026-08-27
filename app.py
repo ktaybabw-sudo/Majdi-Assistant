@@ -11,7 +11,6 @@ st.caption(f"يمني، من {OWNER_FROM}")
 
 @st.cache_resource
 def load_model():
-    # نموذج خفيف يدعم العربية
     model_name = "microsoft/Phi-3.5-mini-instruct"
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(
@@ -31,14 +30,19 @@ except Exception as e:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.write(msg["content"])
+# عرض المحادثة بطريقة مبسطة
+chat_container = st.container()
+with chat_container:
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
 
 if prompt := st.chat_input("اسأل مجدي..."):
-    st.chat_message("user").write(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
-
+    
+    with st.chat_message("user"):
+        st.write(prompt)
+    
     system_prompt = f"أنت مجدي عباس ابوالغيث القديمي من اليمن، صنعاء. تحدث بضمير المتكلم (أنا مجدي). أجب على السؤال التالي بأسلوبك الشخصي وباختصار:\n{prompt}"
     
     with st.spinner("يفكر..."):
@@ -53,6 +57,10 @@ if prompt := st.chat_input("اسأل مجدي..."):
             pad_token_id=tokenizer.eos_token_id
         )
         reply = tokenizer.decode(outputs[0][inputs['input_ids'].shape[1]:], skip_special_tokens=True)
-
-    st.chat_message("assistant").write(reply)
+    
     st.session_state.messages.append({"role": "assistant", "content": reply})
+    
+    with st.chat_message("assistant"):
+        st.write(reply)
+    
+    st.rerun()
