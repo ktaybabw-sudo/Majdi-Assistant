@@ -1,6 +1,6 @@
 import streamlit as st
-import google.generativeai as genai
-import os
+import requests
+import json
 
 # بياناتك الشخصية
 OWNER_NAME = "مجدي عباس ابوالغيث القديمي"
@@ -10,11 +10,31 @@ st.set_page_config(page_title="مجدي عباس - اليمن", page_icon="🇾�
 st.title("🇾🇪 مجدي عباس ابوالغيث القديمي")
 st.caption(f"يمني، من {OWNER_FROM}")
 
-# قراءة المفتاح من البيئة الآمنة (سنضيفه لاحقاً في Streamlit)
-API_KEY = st.secrets["GOOGLE_API_KEY"]
+# قراءة المفتاح من Secrets (سنضيفه بنفس الطريقة)
+HF_TOKEN = st.secrets["HF_TOKEN"]
 
-genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# استخدام نموذج عربي قوي ومفتوح
+API_URL = "https://api-inference.huggingface.co/models/CohereForAI/aya-101"
+headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+
+def query_hf(prompt):
+    payload = {
+        "inputs": prompt,
+        "parameters": {
+            "max_new_tokens": 200,
+            "temperature": 0.7,
+            "do_sample": True,
+            "repetition_penalty": 1.1
+        }
+    }
+    response = requests.post(API_URL, headers=headers, json=payload)
+    if response.status_code == 200:
+        result = response.json()
+        if isinstance(result, list):
+            return result[0].get('generated_text', result[0])
+        return result.get('generated_text', result)
+    else:
+        return f"خطأ في الاتصال: {response.status_code}"
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -35,8 +55,7 @@ if prompt := st.chat_input("اسأل مجدي..."):
 رد مجدي:"""
 
     with st.spinner("يفكر..."):
-        response = model.generate_content(system_prompt)
-        reply = response.text
+        reply = query_hf(system_prompt)
 
     st.chat_message("assistant").write(reply)
     st.session_state.messages.append({"role": "assistant", "content": reply})
